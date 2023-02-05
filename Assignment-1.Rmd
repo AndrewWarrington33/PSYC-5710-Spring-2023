@@ -1,0 +1,89 @@
+---
+title: "Assignment 1"
+author: "Andrew Warrington"
+date: "2023-01-30"
+output: html_document
+---
+Proper packages loaded:
+```{r}
+library(SnowballC)
+library(tm)
+library(ggplot2)
+library(qgraph)
+library(plotly)
+library(dplyr)
+```
+Importing Beatles lyric text data:
+```{r}
+beatles<-read.csv("/Users/andrewwarrington/Desktop/Spring 2023/PSYC 5710/Week 2-Text Mining/lyrics_beatles.csv", header = TRUE, stringsAsFactors = FALSE)
+
+```
+Transform text data into corpus object:
+```{r}
+corpus <- Corpus(VectorSource(beatles[,3]))
+```
+Convert text data to lowercase:
+```{r}
+corpus <- tm_map(corpus,tolower)
+```
+Remove punctuation from text data:
+```{r}
+corpus <- tm_map(corpus, removePunctuation)
+```
+Remove numbers from text data:
+```{r}
+corpus <- tm_map(corpus, removeNumbers)
+```
+Remove stopwords from text data:
+```{r}
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+```
+Stemming the text data:
+```{r}
+corpus <- tm_map(corpus, stemDocument)
+```
+Convert corpus object into document-term matrix:
+```{r}
+dtm <- DocumentTermMatrix(corpus)
+```
+Iteratively changing levels of sparsity:
+```{r}
+dtm0 <- removeSparseTerms(dtm, sparse = 0.99)
+dtm1 <- removeSparseTerms(dtm, sparse = 0.98)
+dtm2 <- removeSparseTerms(dtm, sparse = 0.97)
+dtm3 <- removeSparseTerms(dtm, sparse = 0.96)
+```
+New dtm with upper bound sparsity of 90, and transformed to dataframe:
+```{r}
+dtm.beatles<-removeSparseTerms(dtm, sparse = 0.90)
+beatles.lyrics <- as.data.frame(as.matrix(dtm.beatles))
+dtm.beatles
+```
+Plotting word frequencies with ggplot2:
+```{r}
+freq.dtm <- sort(colSums(beatles.lyrics),decreasing=TRUE)
+freq.data <- data.frame(word = names(freq.dtm),freq=freq.dtm)
+ggplot(freq.data, aes(reorder(word, freq), freq))+geom_col() + xlab(NULL) + coord_flip() + ylab("Frequency") + theme(text = element_text(size = 15),axis.text.y = element_text(size = 5, angle = 45))
+```
+Dynamical heatmap of words correlation matrix: 
+```{r}
+cor.terms <- cor_auto(beatles.lyrics)
+a <- list(showticklabels = TRUE, tickangle = -45)
+plot_ly(x = colnames(cor.terms), 
+                    y = colnames(cor.terms),
+                    z = cor.terms, type = "heatmap") %>%
+  layout(xaxis = a,  showlegend = FALSE, margin =
+           list(l=100,b=100,r=100,u=100))
+
+```
+Save resulting plot as HTML widget: 
+```{r}
+plot.cor<-plot_ly(x = colnames(cor.terms), 
+                    y = colnames(cor.terms),
+                    z = cor.terms, type = "heatmap") %>%
+  layout(xaxis = a,  showlegend = FALSE, margin =
+           list(l=100,b=100,r=100,u=100))
+htmlwidgets::saveWidget(as_widget(plot.cor), file = "beatles.cor.html")
+
+```
+
